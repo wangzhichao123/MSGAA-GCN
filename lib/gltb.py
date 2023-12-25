@@ -1,5 +1,83 @@
 import torch
 import torch.nn as nn
+from .MSGAT import MSGroupAgentAttention
+from .Att import AA_kernel
+
+class GLTB2(nn.Module):
+    def __init__(self, in_c):
+        super(GLTB2, self).__init__()
+        self.bn1 = nn.BatchNorm2d(in_c)
+        self.bn2 = nn.BatchNorm2d(in_c)
+        
+        self.aa_kernel_1 = AA_kernel(in_c, in_c)
+        
+        self.local1x1 = nn.Sequential(nn.Conv2d(in_c, in_c, kernel_size=1, padding=0), nn.BatchNorm2d(in_c))
+        self.local3x3 = nn.Sequential(nn.Conv2d(in_c, in_c, kernel_size=3, padding=1), nn.BatchNorm2d(in_c))
+        self.local5x5 = nn.Sequential(nn.Conv2d(in_c, in_c, kernel_size=5, padding=2), nn.BatchNorm2d(in_c))
+
+        # 7x7 Depth-wise Conv
+        self.dw_conv = nn.Sequential(nn.Conv2d(in_c, in_c, kernel_size=7, padding=3, groups=in_c),
+                                     nn.BatchNorm2d(in_c),
+                                     nn.Conv2d(in_c, in_c, kernel_size=1))
+
+        self.ffn = FFN(in_c, 4 * in_c, in_c) # 可调参数
+
+    def forward(self, x):
+        x_1 = x
+        x = self.bn1(x)
+        # ----- global ------
+        g = self.aa_kernel_1(x)
+        # # ------ local -----
+        l1 = self.local1x1(x)
+        l2 = self.local3x3(x)
+        l3 = self.local5x5(x)
+        l = l1 + l2 + l3              # torch.Size([4, 64, 11, 11])
+        d1 = self.dw_conv(l+g)
+        d = d1 + x_1
+        d_1 = d
+        d = self.bn2(d)
+        d = self.ffn(d)
+        out = d_1 + d
+
+        return out
+
+class GLTB1(nn.Module):
+    def __init__(self, in_c, num_heads, num_patches, qkv_bias, sr_ratio, agent_num):
+        super(GLTB1, self).__init__()
+        self.bn1 = nn.BatchNorm2d(in_c)
+        self.bn2 = nn.BatchNorm2d(in_c)
+        self.sgaa = MSGroupAgentAttention(dim=in_c, num_heads=num_heads, num_patches=num_patches, qkv_bias=qkv_bias, sr_ratio=sr_ratio, agent_num=agent_num)
+
+        self.local1x1 = nn.Sequential(nn.Conv2d(in_c, in_c, kernel_size=1, padding=0), nn.BatchNorm2d(in_c))
+        self.local3x3 = nn.Sequential(nn.Conv2d(in_c, in_c, kernel_size=3, padding=1), nn.BatchNorm2d(in_c))
+        self.local5x5 = nn.Sequential(nn.Conv2d(in_c, in_c, kernel_size=5, padding=2), nn.BatchNorm2d(in_c))
+
+        # 7x7 Depth-wise Conv
+        self.dw_conv = nn.Sequential(nn.Conv2d(in_c, in_c, kernel_size=7, padding=3, groups=in_c),
+                                     nn.BatchNorm2d(in_c),
+                                     nn.Conv2d(in_c, in_c, kernel_size=1))
+
+        self.ffn = FFN(in_c, 4 * in_c, in_c)
+
+    def forward(self, x):
+        x_1 = x
+        x = self.bn1(x)
+        # ----- global ------
+        g = self.sgaa(x)
+        # # ------ local -----
+        l1 = self.local1x1(x)
+        l2 = self.local3x3(x)
+        l3 = self.local5x5(x)
+        l = l1 + l2 + l3              # torch.Size([4, 64, 11, 11])
+        d1 = self.dw_conv(l+g)
+        d = d1 + x_1
+        d_1 = d
+        d = self.bn2(d)
+        d = self.ffn(d)
+        out = d_1 + d
+
+        return out
+        
 class GLTB(nn.Module):
     def __init__(self, in_c):
         super(GLTB, self).__init__()
@@ -26,12 +104,12 @@ class GLTB(nn.Module):
         # ----- global ------
         g1 = self.pam_attention_1_1(x)
         g2 = self.cam_attention_1_1(x)
-        g = self.conv1_1(g1 + g2)     # torch.Size([4, 64, 11, 11])
+        g = self.conv1_1(g1 + g2)     
         # # ------ local -----
         l1 = self.local1x1(x)
         l2 = self.local3x3(x)
         l3 = self.local5x5(x)
-        l = l1 + l2 + l3              # torch.Size([4, 64, 11, 11])
+        l = l1 + l2 + l3              
         d1 = self.dw_conv(l+g)
         d = d1 + x_1
         d_1 = d
@@ -59,6 +137,7 @@ class FFN(nn.Module):
         x = self.drop(x)
         x = self.fc2(x)
         return x
+        
 class PAM_Module(nn.Module):
     def __init__(self, in_dim):
         super(PAM_Module, self).__init__()
@@ -113,7 +192,6 @@ class CAM_Module(nn.Module):
         return out
 
 class PAM_CAM_Layer(nn.Module):
-
     def __init__(self, in_ch, use_pam=True):
         super(PAM_CAM_Layer, self).__init__()
 
@@ -132,7 +210,6 @@ class PAM_CAM_Layer(nn.Module):
 
 
 class MultiConv(nn.Module):
-
     def __init__(self, in_ch, out_ch, attn=True):
         super(MultiConv, self).__init__()
 
