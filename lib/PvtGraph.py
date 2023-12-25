@@ -8,37 +8,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-class conv_block(nn.Module):
-    def __init__(self, ch_in, ch_out):
-        super(conv_block, self).__init__()
-        self.conv = nn.Sequential(
-            nn.Conv2d(ch_in, ch_out, kernel_size=3, stride=1, padding=1, bias=True),
-            nn.BatchNorm2d(ch_out),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(ch_out, ch_out, kernel_size=3, stride=1, padding=1, bias=True),
-            nn.BatchNorm2d(ch_out),
-            nn.ReLU(inplace=True)
-        )
-
-    def forward(self, x):
-        x = self.conv(x)
-        return x
-
-
-class up_conv(nn.Module):
-    def __init__(self, ch_in, ch_out, kernel_size=3, stride=1, padding=1, groups=1):
-        super(up_conv, self).__init__()
-        self.up = nn.Sequential(
-            nn.Upsample(scale_factor=2),
-            nn.Conv2d(ch_in, ch_out, kernel_size=kernel_size, stride=stride, padding=padding, bias=False),
-            nn.BatchNorm2d(ch_out),
-            nn.ReLU(inplace=True))
-
-    def forward(self, x):
-        x = self.up(x)
-        return x
-
-
 class PvtGraphNet(nn.Module):
     def __init__(self, n_class=9):
         super(PvtGraphNet, self).__init__()
@@ -51,33 +20,16 @@ class PvtGraphNet(nn.Module):
         model_dict.update(state_dict)
         self.backbone.load_state_dict(model_dict)
 
-        # ------------- GCN Decoder ---------------
-
-        self.gcn4 = Grapher(512, 9, 1, 'mr', 'gelu', 'batch',
-                            False, False, 0.2, 1, n=49, drop_path=0.0,
-                            relative_pos=True)
-
-        self.gcn3 = Grapher(320, 9, 1, 'mr', 'gelu', 'batch',
-                            False, False, 0.2, 2, n=196, drop_path=0.0,
-                            relative_pos=True)
-
-        self.gcn2 = Grapher(128, 9, 4, 'mr', 'gelu', 'batch',
-                            False, False, 0.2, 4, n=784, drop_path=0.0,
-                            relative_pos=True)
-
-        self.gcn1 = Grapher(64, 9, 3, 'mr', 'gelu', 'batch',
-                            False, False, 0.2, 8, n=3136, drop_path=0.0,
-                            relative_pos=True)
+        # ------------- GCN Decoder --------------
+        self.gcn4 = Grapher(512, 9, 1, 'mr', 'gelu', 'batch', False, False, 0.2, 1, n=49, drop_path=0.0, relative_pos=True) # 7 x 7
+        self.gcn3 = Grapher(320, 9, 1, 'mr', 'gelu', 'batch', False, False, 0.2, 2, n=196, drop_path=0.0, relative_pos=True) # 14 x 14
+        self.gcn2 = Grapher(128, 9, 4, 'mr', 'gelu', 'batch', False, False, 0.2, 4, n=784, drop_path=0.0, relative_pos=True) # 28 x 28
+        self.gcn1 = Grapher(64, 9, 2, 'mr', 'gelu', 'batch', False, False, 0.2, 8, n=3136, drop_path=0.0, relative_pos=True) # 56 x 56
 
         self.gltb4 = GLTB(512)
         self.gltb3 = GLTB(320)
         self.gltb2 = GLTB(128)
         self.gltb1 = GLTB(64)
-
-        self.mid4 = nn.Conv2d(512, 512, 1)
-        self.mid3 = nn.Conv2d(320, 320, 1)
-        self.mid2 = nn.Conv2d(128, 128, 1)
-        self.mid1 = nn.Conv2d(64, 64, 1)
 
         self.fusion3 = Fusion(320, 512)
         self.fusion2 = Fusion(128, 320)
