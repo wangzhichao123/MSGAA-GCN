@@ -18,8 +18,10 @@ torchvision 0.12.0
 python train_synapse.py
 python train_ACDC.py
 ```
+If you need to train on the polyp dataset, please port MSGAA-GCN to Polyp-PVT. Please refer to [Polyp-PVT](https://github.com/DengPingFan/Polyp-PVT) for detailed instructions.
 ### 5、Test
 ```
 python test_synapse.py
 python test_ACDC.py
 ```
+If you need to test on the polyp dataset, please port MSGAA-GCN to Polyp-PVT. Please refer to [Polyp-PVT](https://github.com/DengPingFan/Polyp-PVT) for detailed instructions.
