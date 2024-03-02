@@ -13,3 +13,13 @@ Python 3.8
 Pytorch 1.11.0
 torchvision 0.12.0
 ```
+### 4、Train
+```
+python train_synapse.py
+python train_ACDC.py
+```
+### 5、Test
+```
+python test_synapse.py
+python test_ACDC.py
+```
