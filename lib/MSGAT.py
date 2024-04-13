@@ -1,7 +1,7 @@
 import torch.nn as nn
 import torch
 import torch.nn.functional as F
-from .model_timm.layers import DropPath, to_2tuple, trunc_normal_
+from lib.model_timm.layers import DropPath, to_2tuple, trunc_normal_
 
 class SeparableConv2d(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size=1, stride=1, padding=0, dilation=1, bias=False):
