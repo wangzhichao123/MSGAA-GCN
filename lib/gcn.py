@@ -4,9 +4,9 @@ from timm.models.layers import DropPath
 import torch.nn.functional as F
 import numpy as np
 
-from torch_edge import DenseDilatedKnnGraph
-from torch_nn import batched_index_select, BasicConv
-from pos_embed import get_2d_relative_pos_embed
+from .torch_edge import DenseDilatedKnnGraph
+from .torch_nn import batched_index_select, BasicConv
+from .pos_embed import get_2d_relative_pos_embed
 class GraphConv2d(nn.Module):
     """
     Static graph convolution layer
