@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
-from .MSGAT import MSGroupAgentAttention
-from .Att import AA_kernel
+from lib.MSGAT import MSGroupAgentAttention
+from lib.Att import AA_kernel
 
 class GLTB2(nn.Module):
     def __init__(self, in_c):
